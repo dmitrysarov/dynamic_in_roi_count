@@ -90,8 +90,29 @@ def is_in_dynamic_roi(detection: Detections, dynamic_roi_class: str) -> bool:
     ).T
     return res
 
+def sortby_frameid_and_class(detections: Detections, first_order_class: str) -> Detections:
+    """
+    for proper MAX_CART_ON_FRAME usage, detection should be sorted by frame_id and class, where 'cart' class on the
+    first order
+    @param detections:
+    @return:
+    """
+    classes = set(detections.cls)
+    classes.add(first_order_class)  # guaranty that class cart presetn
+    classes = list(classes)
+    classes.remove(first_order_class)
+    order = [first_order_class] + classes
+    order_map = {item: i for i, item in enumerate(order)}
+    frame_id = detections.frame_id
+    cls = detections.cls
+    cls_order = np.copy(cls)
+    for k, v in order_map.items():
+        cls_order[cls == k] = v
+    order_index = np.lexsort((cls_order, frame_id))
+    return detections[order_index]
 
 def count_frames(detections: Detections, dynamic_roi_class: str):
+    detections = sortby_frameid_and_class(detections, first_order_class=dynamic_roi_class)
     tracklet_hits = is_in_dynamic_roi(detections, dynamic_roi_class=dynamic_roi_class)
     track_ids=detections.track_id
     u_track_ids, inverse_indices = np.unique(track_ids, return_inverse=True)
